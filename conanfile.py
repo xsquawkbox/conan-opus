@@ -61,18 +61,6 @@ conan_basic_setup()''')
             cmake.definitions['OPUS_X86_PRESUME_SSE4_1'] = (self.options.optimise_sse4_1 == "Force")
             cmake.definitions['OPUS_X86_MAY_HAVE_AVX'] = (self.options.optimise_avx != "Disable")
             cmake.definitions['OPUS_X86_PRESUME_AVX'] = (self.options.optimise_avx == "Force")
-        # disable the autovectoriser on macOS - it generates optimisations that may violate the explicit
-        # optimisation options we've chosen.
-        if (self.settings.compiler == 'apple-clang' or self.settings.compiler == 'clang'):
-            arch_flag = ''
-            if self.settings.arch == 'x86_64':
-                arch_flag = '-m64'
-            elif self.settings.arch == 'x86':
-                # shouldn't happen
-                arch_flag = '-m32'
-            if arch_flag != '':
-                cmake.definitions['CONAN_C_FLAGS'] = '%s -fno-slp-vectorize -fno-vectorize'%(arch_flag)
-                cmake.definitions['CONAN_CXX_FLAGS'] = '%s -fno-slp-vectorize -fno-vectorize'%(arch_flag)
         cmake.configure(source_folder="opus")
         return cmake
 
