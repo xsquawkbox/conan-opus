@@ -40,18 +40,8 @@ class LibopusConan(ConanFile):
 
     def source(self):
         git = tools.Git(folder='opus')
-        git.clone('https://github.com/xiph/opus.git')
-        git.checkout('v%s'%self.version)
-        # ugh.  The upstream tarball is missing a critical cmake build file.
-        #tools.get('https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz')
-        tools.replace_in_file("opus/CMakeLists.txt", "project(Opus LANGUAGES C VERSION ${PROJECT_VERSION})",
-                              '''project(Opus LANGUAGES C VERSION ${PROJECT_VERSION})
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()''')
-        tools.replace_in_file("opus/opus_functions.cmake", "check_and_set_flag(SSE1 -msse)", "check_flag(SSE1 -msse)")
-        tools.replace_in_file("opus/opus_functions.cmake", "check_and_set_flag(SSE2 -msse2)", "check_flag(SSE2 -msse2)")
-        tools.replace_in_file("opus/opus_functions.cmake", "check_and_set_flag(SSE4_1 -msse4.1)", "check_flag(SSE4_1 -msse4.1)")
-        tools.replace_in_file("opus/opus_functions.cmake", "check_and_set_flag(AVX -mavx)", "check_flag(AVX -mavx)")
+        git.clone('https://github.com/xsquawkbox/opus.git')
+        git.checkout('v%s-xsb'%self.version)
 
     def _configure_cmake(self):
         cmake = CMake(self)
