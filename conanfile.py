@@ -5,7 +5,7 @@ class LibopusConan(ConanFile):
     version = "1.3.1"
     license = "BSD-Like"
     author = "Chris Collins <kuroneko@sysadninjas.net>"
-    url = "https://git.sysadninjas.net/conan/opus"
+    url = "https://github.com/xsquawkbox/conan-opus"
     description = "the Xiph Opus audio codec reference implementation"
     topics = ("audio", "compression", "codec")
     settings = "os", "compiler", "build_type", "arch"
@@ -42,6 +42,10 @@ class LibopusConan(ConanFile):
         git = tools.Git(folder='opus')
         git.clone('https://github.com/xsquawkbox/opus.git')
         git.checkout('v%s-xsb'%self.version)
+        tools.replace_in_file("opus/CMakeLists.txt", "project(Opus LANGUAGES C VERSION ${PROJECT_VERSION})",
+                              '''project(Opus LANGUAGES C VERSION ${PROJECT_VERSION})
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()''')
 
     def _configure_cmake(self):
         cmake = CMake(self)
