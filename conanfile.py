@@ -12,18 +12,18 @@ class LibopusConan(ConanFile):
     options = {
         "shared": [True, False],
         "fPIC": [True, False],
-        "optimise_sse": [True, False],
-        "optimise_sse2": [True, False],
-        "optimise_sse4_1": [True, False],
-        "optimise_avx": [True, False],
+        "optimise_sse": ["Disable", "Allow", "Force"],
+        "optimise_sse2": ["Disable", "Allow", "Force"],
+        "optimise_sse4_1": ["Disable", "Allow", "Force"],
+        "optimise_avx": ["Disable", "Allow", "Force"],
         }
     default_options = {
         "shared": False,
         "fPIC": True,
-        "optimise_sse": True,
-        "optimise_sse2": True,
-        "optimise_sse4_1": False,
-        "optimise_avx": False,
+        "optimise_sse": "Allow",
+        "optimise_sse2": "Allow",
+        "optimise_sse4_1": "Allow",
+        "optimise_avx": "Allow",
         }
     generators = "cmake"
 
@@ -48,21 +48,37 @@ class LibopusConan(ConanFile):
                               '''project(Opus LANGUAGES C VERSION ${PROJECT_VERSION})
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()''')
+        tools.replace_in_file("opus/opus_functions.cmake", "check_and_set_flag(SSE1 -msse)", "check_flag(SSE1 -msse)")
+        tools.replace_in_file("opus/opus_functions.cmake", "check_and_set_flag(SSE2 -msse2)", "check_flag(SSE2 -msse2)")
+        tools.replace_in_file("opus/opus_functions.cmake", "check_and_set_flag(SSE4_1 -msse4.1)", "check_flag(SSE4_1 -msse4.1)")
+        tools.replace_in_file("opus/opus_functions.cmake", "check_and_set_flag(AVX -mavx)", "check_flag(AVX -mavx)")
 
     def _configure_cmake(self):
         cmake = CMake(self)
         if 'fPIC' in self.options:
             cmake.definitions['CMAKE_POSITION_INDEPENDENT_CODE'] = self.options.fPIC
         if self.settings.arch == 'x86':
-            cmake.definitions['OPUS_X86_MAY_HAVE_SSE'] = self.options.optimise_sse
-            cmake.definitions['OPUS_X86_PRESUME_SSE'] = self.options.optimise_sse
-            cmake.definitions['OPUS_X86_MAY_HAVE_SSE2'] = self.options.optimise_sse2
-            cmake.definitions['OPUS_X86_PRESUME_SSE2'] = self.options.optimise_sse2
+            cmake.definitions['OPUS_X86_MAY_HAVE_SSE'] = (self.options.optimise_sse != "Disable")
+            cmake.definitions['OPUS_X86_PRESUME_SSE'] = (self.options.optimise_sse == "Force")
+            cmake.definitions['OPUS_X86_MAY_HAVE_SSE2'] = (self.options.optimise_sse2 != "Disable")
+            cmake.definitions['OPUS_X86_PRESUME_SSE2'] = (self.options.optimise_sse2 == "Force")
         if self.settings.arch == 'x86' or self.settings.arch == 'x86_64':
-            cmake.definitions['OPUS_X86_MAY_HAVE_SSE4_1'] = self.options.optimise_sse4_1
-            cmake.definitions['OPUS_X86_PRESUME_SSE4_1'] = self.options.optimise_sse4_1
-            cmake.definitions['OPUS_X86_MAY_HAVE_AVX'] = self.options.optimise_avx
-            cmake.definitions['OPUS_X86_PRESUME_AVX'] = self.options.optimise_avx
+            cmake.definitions['OPUS_X86_MAY_HAVE_SSE4_1'] = (self.options.optimise_sse4_1 != "Disable")
+            cmake.definitions['OPUS_X86_PRESUME_SSE4_1'] = (self.options.optimise_sse4_1 == "Force")
+            cmake.definitions['OPUS_X86_MAY_HAVE_AVX'] = (self.options.optimise_avx != "Disable")
+            cmake.definitions['OPUS_X86_PRESUME_AVX'] = (self.options.optimise_avx == "Force")
+        # disable the autovectoriser on macOS - it generates optimisations that may violate the explicit
+        # optimisation options we've chosen.
+        if (self.settings.compiler == 'apple-clang' or self.settings.compiler == 'clang'):
+            arch_flag = ''
+            if self.settings.arch == 'x86_64':
+                arch_flag = '-m64'
+            elif self.settings.arch == 'x86':
+                # shouldn't happen
+                arch_flag = '-m32'
+            if arch_flag != '':
+                cmake.definitions['CONAN_C_FLAGS'] = '%s -fno-slp-vectorize -fno-vectorize'%(arch_flag)
+                cmake.definitions['CONAN_CXX_FLAGS'] = '%s -fno-slp-vectorize -fno-vectorize'%(arch_flag)
         cmake.configure(source_folder="opus")
         return cmake
 
